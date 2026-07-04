@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AlphaScout — Live Token Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #060B17;
+    --surface:   #0D1526;
+    --surface2:  #121D33;
+    --border:    #1E2D4A;
+    --border2:   #243550;
+    --cyan:      #00D4FF;
+    --cyan-dim:  rgba(0,212,255,0.12);
+    --cyan-glow: rgba(0,212,255,0.25);
+    --amber:     #F59E0B;
+    --red:       #EF4444;
+    --green:     #10B981;
+    --purple:    #8B5CF6;
+    --text:      #E2EAF4;
+    --text-dim:  #6B84A8;
+    --text-faint:#3D5273;
+    --mono:      'Space Mono', monospace;
+    --sans:      'Space Grotesk', sans-serif;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── GRID NOISE TEXTURE ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.02) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(6,11,23,0.92);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.08em;
+    color: var(--text);
+  }
+
+  .logo-icon {
+    width: 28px;
+    height: 28px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .logo-icon svg { width: 28px; height: 28px; }
+
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--cyan);
+    background: var(--cyan-dim);
+    border: 1px solid rgba(0,212,255,0.3);
+    padding: 4px 10px;
+    border-radius: 4px;
+  }
+
+  .live-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--cyan);
+    border-radius: 50%;
+    animation: pulse-dot 1.4s ease-in-out infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  /* ── HERO ── */
+  .hero {
+    position: relative;
+    z-index: 1;
+    padding: 64px 24px 48px;
+    text-align: center;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  .hero-eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    color: var(--cyan);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  .hero h1 {
+    font-size: clamp(32px, 6vw, 56px);
+    font-weight: 700;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    margin-bottom: 16px;
+  }
+
+  .hero h1 span {
+    color: transparent;
+    -webkit-text-stroke: 1px var(--cyan);
+  }
+
+  .hero p {
+    font-size: 16px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    max-width: 480px;
+    margin: 0 auto 36px;
+  }
+
+  /* ── SEARCH / CONTROLS ── */
+  .controls {
+    position: relative;
+    z-index: 1;
+    max-width: 800px;
+    margin: 0 auto 40px;
+    padding: 0 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .search-row {
+    display: flex;
+    gap: 10px;
+  }
+
+  .search-wrap {
+    flex: 1;
+    position: relative;
+  }
+
+  .search-wrap svg {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-faint);
+    width: 16px;
+    height: 16px;
+    pointer-events: none;
+  }
+
+  input[type="text"] {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px 12px 40px;
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  input[type="text"]:focus {
+    border-color: var(--cyan);
+    box-shadow: 0 0 0 3px var(--cyan-dim);
+  }
+
+  input[type="text"]::placeholder { color: var(--text-faint); }
+
+  .filter-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .filter-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    margin-right: 4px;
+  }
+
+  .chip {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    background: var(--surface);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .chip:hover { border-color: var(--cyan); color: var(--cyan); }
+  .chip.active { border-color: var(--cyan); color: var(--cyan); background: var(--cyan-dim); }
+
+  .btn-scan {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: var(--cyan);
+    color: #060B17;
+    border: none;
+    border-radius: 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+
+  .btn-scan:hover { opacity: 0.88; }
+  .btn-scan:active { transform: scale(0.97); }
+  .btn-scan:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  /* ── STATS BAR ── */
+  .stats-bar {
+    position: relative;
+    z-index: 1;
+    max-width: 800px;
+    margin: 0 auto 28px;
+    padding: 0 24px;
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .stat-val {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .stat-val.cyan { color: var(--cyan); }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-faint);
+    font-family: var(--mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .stat-divider {
+    width: 1px;
+    height: 36px;
+    background: var(--border);
+    align-self: center;
+  }
+
+  /* ── TOKEN GRID ── */
+  .grid-wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* ── TOKEN CARD ── */
+  .token-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.15s;
+    animation: card-in 0.35s ease both;
+  }
+
+  @keyframes card-in {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .token-card:hover {
+    border-color: var(--border2);
+    transform: translateY(-1px);
+  }
+
+  .token-card.expanded { border-color: var(--cyan); }
+
+  /* signal bar at top of card */
+  .signal-bar {
+    height: 2px;
+    background: linear-gradient(90deg, var(--cyan) 0%, transparent 100%);
+    animation: signal-sweep 2.5s ease-out both;
+    transform-origin: left;
+  }
+
+  @keyframes signal-sweep {
+    from { transform: scaleX(0); opacity: 0.3; }
+    to   { transform: scaleX(1); opacity: 1; }
+  }
+
+  .signal-bar.risk-high     { background: linear-gradient(90deg, var(--red) 0%, transparent 100%); }
+  .signal-bar.risk-elevated { background: linear-gradient(90deg, var(--amber) 0%, transparent 100%); }
+  .signal-bar.risk-moderate { background: linear-gradient(90deg, #60A5FA 0%, transparent 100%); }
+  .signal-bar.risk-low      { background: linear-gradient(90deg, var(--green) 0%, transparent 100%); }
+
+  .card-main {
+    padding: 16px 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    cursor: pointer;
+  }
+
+  .token-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-dim);
+    flex-shrink: 0;
+    letter-spacing: 0;
+  }
+
+  .token-info { flex: 1; min-width: 0; }
+
+  .token-name-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+  }
+
+  .token-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+  }
+
+  .token-symbol {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-faint);
+    background: var(--surface2);
+    padding: 2px 7px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  .risk-badge {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid;
+  }
+
+  .risk-badge.high     { color: var(--red);    border-color: rgba(239,68,68,0.4);   background: rgba(239,68,68,0.08); }
+  .risk-badge.elevated { color: var(--amber);  border-color: rgba(245,158,11,0.4);  background: rgba(245,158,11,0.08); }
+  .risk-badge.moderate { color: #60A5FA;        border-color: rgba(96,165,250,0.4);  background: rgba(96,165,250,0.08); }
+  .risk-badge.low      { color: var(--green);  border-color: rgba(16,185,129,0.4);  background: rgba(16,185,129,0.08); }
+
+  .token-meta {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .meta-val {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .meta-label {
+    font-size: 10px;
+    color: var(--text-faint);
+    font-family: var(--mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .card-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .btn-pitch {
+    padding: 7px 14px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .btn-pitch:hover {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    background: var(--cyan-dim);
+  }
+
+  .btn-pitch.active {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    background: var(--cyan-dim);
+  }
+
+  .age-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-faint);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .age-tag.fresh { color: var(--cyan); }
+
+  /* ── PITCH PANEL ── */
+  .pitch-panel {
+    display: none;
+    padding: 0 20px 20px;
+    border-top: 1px solid var(--border);
+    animation: panel-in 0.2s ease both;
+  }
+
+  @keyframes panel-in {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .pitch-panel.open { display: block; }
+
+  .pitch-section {
+    margin-top: 16px;
+  }
+
+  .pitch-section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .pitch-section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .flag-list {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .flag-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-dim);
+  }
+
+  .flag-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-top: 6px;
+    flex-shrink: 0;
+    background: var(--amber);
+  }
+
+  .flag-dot.ok { background: var(--green); }
+  .flag-dot.bad { background: var(--red); }
+
+  .checklist {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .check-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.5;
+    padding: 8px 12px;
+    background: var(--surface2);
+    border-radius: 6px;
+    border: 1px solid var(--border);
+  }
+
+  .check-icon {
+    font-size: 12px;
+    margin-top: 1px;
+    flex-shrink: 0;
+  }
+
+  .pitch-disclaimer {
+    margin-top: 14px;
+    padding: 10px 14px;
+    background: rgba(245,158,11,0.06);
+    border: 1px solid rgba(245,158,11,0.2);
+    border-radius: 6px;
+    font-size: 11px;
+    color: var(--amber);
+    line-height: 1.5;
+    font-family: var(--mono);
+  }
+
+  .pair-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-faint);
+    text-decoration: none;
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin-top: 12px;
+    transition: all 0.15s;
+  }
+
+  .pair-link:hover { color: var(--cyan); border-color: var(--cyan); }
+
+  /* ── EMPTY / LOADING ── */
+  .state-box {
+    text-align: center;
+    padding: 64px 24px;
+    color: var(--text-faint);
+  }
+
+  .state-box .icon {
+    font-size: 40px;
+    margin-bottom: 16px;
+    display: block;
+  }
+
+  .state-box p {
+    font-size: 14px;
+    line-height: 1.6;
+    max-width: 320px;
+    margin: 0 auto;
+  }
+
+  .spinner {
+    width: 32px;
+    height: 32px;
+    border: 2px solid var(--border);
+    border-top-color: var(--cyan);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin: 0 auto 16px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── FOOTER ── */
+  footer {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 32px 24px;
+    border-top: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-faint);
+    letter-spacing: 0.06em;
+  }
+
+  footer a { color: var(--cyan); text-decoration: none; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 580px) {
+    .hero { padding: 40px 20px 32px; }
+    .card-main { flex-wrap: wrap; }
+    .card-actions { flex-direction: row; width: 100%; justify-content: space-between; align-items: center; }
+    .stat-divider { display: none; }
+    .token-name { max-width: 140px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .signal-bar, .live-dot, .spinner, .token-card { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="14" cy="14" r="13" stroke="#00D4FF" stroke-width="1.5" opacity="0.3"/>
+        <circle cx="14" cy="14" r="8" stroke="#00D4FF" stroke-width="1.5" opacity="0.6"/>
+        <circle cx="14" cy="14" r="3" fill="#00D4FF"/>
+        <line x1="14" y1="1" x2="14" y2="6" stroke="#00D4FF" stroke-width="1.5" opacity="0.5"/>
+        <line x1="14" y1="22" x2="14" y2="27" stroke="#00D4FF" stroke-width="1.5" opacity="0.5"/>
+        <line x1="1" y1="14" x2="6" y2="14" stroke="#00D4FF" stroke-width="1.5" opacity="0.5"/>
+        <line x1="22" y1="14" x2="27" y2="14" stroke="#00D4FF" stroke-width="1.5" opacity="0.5"/>
+      </svg>
+    </div>
+    ALPHASCOUT
+  </div>
+  <div class="live-badge">
+    <span class="live-dot"></span>
+    LIVE
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-eyebrow">Web3 Token Intelligence</div>
+  <h1>Scout <span>Alpha</span><br>Before the Crowd</h1>
+  <p>Live token launches from Dexscreener — risk-scored, age-filtered, and pitched for your research. Not financial advice.</p>
+</section>
+
+<!-- CONTROLS -->
+<div class="controls">
+  <div class="search-row">
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input type="text" id="query-input" placeholder="Search chain or token — e.g. base, ethereum, sol…" value="base">
+    </div>
+    <button class="btn-scan" id="scan-btn" onclick="runScan()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+      </svg>
+      SCAN
+    </button>
+  </div>
+  <div class="filter-row">
+    <span class="filter-label">Max age:</span>
+    <button class="chip active" data-age="30"  onclick="setAge(this, 30)">30 min</button>
+    <button class="chip"        data-age="60"  onclick="setAge(this, 60)">1 hour</button>
+    <button class="chip"        data-age="360" onclick="setAge(this, 360)">6 hours</button>
+    <button class="chip"        data-age="1440" onclick="setAge(this, 1440)">24 hours</button>
+    <span style="margin-left:auto; font-family:var(--mono); font-size:10px; color:var(--text-faint); letter-spacing:0.06em;" id="last-update"></span>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-bar" id="stats-bar" style="display:none">
+  <div class="stat">
+    <span class="stat-val cyan" id="stat-count">—</span>
+    <span class="stat-label">Pairs Found</span>
+  </div>
+  <div class="stat-divider"></div>
+  <div class="stat">
+    <span class="stat-val" id="stat-liq">—</span>
+    <span class="stat-label">Avg Liquidity</span>
+  </div>
+  <div class="stat-divider"></div>
+  <div class="stat">
+    <span class="stat-val" id="stat-age">—</span>
+    <span class="stat-label">Newest Pair</span>
+  </div>
+  <div class="stat-divider"></div>
+  <div class="stat">
+    <span class="stat-val" id="stat-risk">—</span>
+    <span class="stat-label">High Risk</span>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div class="grid-wrap" id="grid"></div>
+
+<!-- FOOTER -->
+<footer>
+  Built on <a href="https://dexscreener.com" target="_blank">Dexscreener</a> · Powered by
+  <a href="https://github.com/Emmascloud/alphascout" target="_blank">AlphaScout</a> ·
+  Aomi Community App · Not financial advice
+</footer>
+
+<script>
+  // ── STATE ──
+  let maxAge = 30;
+  let currentTokens = [];
+
+  const DILIGENCE = [
+    "Verify contract is renounced or has a reasonable timelock",
+    "Check token holder concentration — top 10 wallets should not dominate",
+    "Confirm LP tokens are locked or burned",
+    "Review team socials and website for credibility signals",
+    "Check deployer address for prior rug history on chain explorers"
+  ];
+
+  // ── HELPERS ──
+  function fmtUsd(n) {
+    if (!n || n === 0) return '$—';
+    if (n >= 1e9) return '$' + (n / 1e9).toFixed(1) + 'B';
+    if (n >= 1e6) return '$' + (n / 1e6).toFixed(1) + 'M';
+    if (n >= 1e3) return '$' + (n / 1e3).toFixed(0) + 'K';
+    return '$' + n.toFixed(0);
+  }
+
+  function fmtAge(mins) {
+    if (mins === null || mins === undefined) return '?';
+    if (mins < 60) return mins + 'm';
+    const h = Math.floor(mins / 60), m = mins % 60;
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  }
+
+  function fmtPrice(p) {
+    if (!p) return '—';
+    const n = parseFloat(p);
+    if (n < 0.000001) return '$' + n.toExponential(2);
+    if (n < 0.01) return '$' + n.toFixed(6);
+    if (n < 1) return '$' + n.toFixed(4);
+    return '$' + n.toFixed(2);
+  }
+
+  function ageMinutes(pairCreatedAt) {
+    if (!pairCreatedAt) return null;
+    return Math.floor((Date.now() - pairCreatedAt) / 60000);
+  }
+
+  function getLiquidity(pair) {
+    return pair?.liquidity?.usd || 0;
+  }
+
+  function scoreRisk(pair) {
+    let pts = 0;
+    const flags = [];
+    const liq = getLiquidity(pair);
+    const age = ageMinutes(pair.pairCreatedAt);
+    const vol24 = pair?.volume?.h24 || 0;
+
+    if (liq < 5000)       { flags.push({ text: 'Liquidity under $5k — extreme slippage risk', sev: 'bad' }); pts += 3; }
+    else if (liq < 25000) { flags.push({ text: 'Liquidity under $25k — thin, small trades only', sev: 'warn' }); pts += 2; }
+    else if (liq < 100000){ flags.push({ text: 'Liquidity under $100k — moderate depth', sev: 'warn' }); pts += 1; }
+    else                   { flags.push({ text: `Liquidity ${fmtUsd(liq)} — adequate depth`, sev: 'ok' }); }
+
+    if (age !== null) {
+      if (age < 30)       { flags.push({ text: `Pair is ${age}m old — pre-discovery, unverified`, sev: 'bad' }); pts += 3; }
+      else if (age < 360) { flags.push({ text: `Pair is ${fmtAge(age)} old — early price discovery`, sev: 'warn' }); pts += 1; }
+      else                { flags.push({ text: `Pair is ${fmtAge(age)} old — some price history exists`, sev: 'ok' }); }
+    } else {
+      flags.push({ text: 'Creation time unavailable — cannot confirm recency', sev: 'warn' }); pts += 1;
+    }
+
+    if (liq > 0 && vol24 > 0) {
+      const ratio = vol24 / liq;
+      if (ratio > 20)    { flags.push({ text: `Vol/Liq ratio ${ratio.toFixed(0)}x — abnormal churn, possible wash trading`, sev: 'bad' }); pts += 2; }
+      else if (ratio > 5){ flags.push({ text: `Vol/Liq ratio ${ratio.toFixed(1)}x — active trading`, sev: 'ok' }); }
+    }
+
+    const txns = pair?.txns?.h24;
+    if (txns) {
+      const b = txns.buys || 0, s = txns.sells || 0, tot = b + s;
+      if (tot > 10) {
+        const sellRatio = s / tot;
+        if (sellRatio > 0.75)      { flags.push({ text: `${Math.round(sellRatio*100)}% sells — possible distribution pattern`, sev: 'bad' }); pts += 2; }
+        else if (sellRatio < 0.35) { flags.push({ text: `${Math.round((1-sellRatio)*100)}% buys — strong buy pressure`, sev: 'ok' }); }
+        else                        { flags.push({ text: `Buy/sell split balanced (${b}/${s})`, sev: 'ok' }); }
+      }
+    }
+
+    const pc1h = pair?.priceChange?.h1;
+    if (pc1h !== undefined && pc1h !== null) {
+      if (Math.abs(pc1h) > 50) { flags.push({ text: `1h price move ${pc1h > 0 ? '+' : ''}${pc1h.toFixed(0)}% — extreme volatility`, sev: 'warn' }); pts += 1; }
+    }
+
+    if (flags.length === 0) flags.push({ text: 'No major heuristic red flags from available data', sev: 'ok' });
+
+    const tier = pts <= 1 ? 'low' : pts <= 3 ? 'moderate' : pts <= 6 ? 'elevated' : 'high';
+    return { tier, flags, pts };
+  }
+
+  function initials(name) {
+    return (name || '?').replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase() || '?';
+  }
+
+  // ── FILTER + SORT ──
+  function processResults(pairs) {
+    let filtered = pairs
+      .filter(p => {
+        const age = ageMinutes(p.pairCreatedAt);
+        return age !== null && age >= 0 && age <= maxAge;
+      })
+      .sort((a, b) => (b.pairCreatedAt || 0) - (a.pairCreatedAt || 0))
+      .slice(0, 20);
+    return filtered;
+  }
+
+  // ── STATS ──
+  function updateStats(tokens) {
+    if (!tokens.length) { document.getElementById('stats-bar').style.display = 'none'; return; }
+    document.getElementById('stats-bar').style.display = 'flex';
+    const liqs = tokens.map(t => getLiquidity(t)).filter(l => l > 0);
+    const avgLiq = liqs.length ? liqs.reduce((a,b)=>a+b,0)/liqs.length : 0;
+    const newest = tokens.reduce((min, t) => {
+      const a = ageMinutes(t.pairCreatedAt); return (a !== null && a < min) ? a : min;
+    }, Infinity);
+    const highRisk = tokens.filter(t => scoreRisk(t).tier === 'high').length;
+    document.getElementById('stat-count').textContent = tokens.length;
+    document.getElementById('stat-liq').textContent = fmtUsd(avgLiq);
+    document.getElementById('stat-age').textContent = newest === Infinity ? '—' : fmtAge(newest);
+    document.getElementById('stat-risk').textContent = highRisk;
+  }
+
+  // ── RENDER ──
+  function renderCard(pair, idx) {
+    const { tier, flags } = scoreRisk(pair);
+    const age = ageMinutes(pair.pairCreatedAt);
+    const liq = getLiquidity(pair);
+    const vol = pair?.volume?.h24 || 0;
+    const pc24 = pair?.priceChange?.h24;
+    const name = pair.baseToken?.name || '?';
+    const sym  = pair.baseToken?.symbol || '?';
+    const addr = pair.pairAddress || '';
+    const chain = pair.chainId || '';
+    const dex   = pair.dexId || '';
+    const url   = pair.url || `https://dexscreener.com/${chain}/${addr}`;
+    const fresh = age !== null && age < 30;
+
+    const pcColor = pc24 > 0 ? 'var(--green)' : pc24 < 0 ? 'var(--red)' : 'var(--text-dim)';
+    const pcStr   = pc24 !== null && pc24 !== undefined ? `${pc24>0?'+':''}${pc24.toFixed(1)}%` : '—';
+
+    const flagsHtml = flags.map(f => `
+      <div class="flag-item">
+        <span class="flag-dot ${f.sev === 'ok' ? 'ok' : f.sev === 'bad' ? 'bad' : ''}"></span>
+        <span>${f.text}</span>
+      </div>`).join('');
+
+    const checklistHtml = DILIGENCE.map(c => `
+      <div class="check-item">
+        <span class="check-icon">☐</span>
+        <span>${c}</span>
+      </div>`).join('');
+
+    return `
+      <div class="token-card" id="card-${idx}" style="animation-delay:${idx*60}ms">
+        <div class="signal-bar risk-${tier}"></div>
+        <div class="card-main" onclick="togglePitch(${idx})">
+          <div class="token-avatar">${initials(sym)}</div>
+          <div class="token-info">
+            <div class="token-name-row">
+              <span class="token-name" title="${name}">${name}</span>
+              <span class="token-symbol">${sym}</span>
+              <span class="risk-badge ${tier}">${tier.toUpperCase()}</span>
+            </div>
+            <div class="token-meta">
+              <div class="meta-item">
+                <span class="meta-val">${fmtUsd(liq)}</span>
+                <span class="meta-label">Liquidity</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-val">${fmtUsd(vol)}</span>
+                <span class="meta-label">Vol 24h</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-val" style="color:${pcColor}">${pcStr}</span>
+                <span class="meta-label">24h Change</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-val">${fmtPrice(pair.priceUsd)}</span>
+                <span class="meta-label">Price</span>
+              </div>
+            </div>
+          </div>
+          <div class="card-actions">
+            <span class="age-tag ${fresh ? 'fresh' : ''}">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              ${age !== null ? fmtAge(age) : '?'} ago
+            </span>
+            <button class="btn-pitch" id="btn-${idx}" onclick="event.stopPropagation();togglePitch(${idx})">
+              GET PITCH ↓
+            </button>
+          </div>
+        </div>
+        <div class="pitch-panel" id="pitch-${idx}">
+          <div class="pitch-section">
+            <div class="pitch-section-label">Risk Signals</div>
+            <div class="flag-list">${flagsHtml}</div>
+          </div>
+          <div class="pitch-section">
+            <div class="pitch-section-label">Metrics</div>
+            <div class="flag-list">
+              <div class="flag-item"><span class="flag-dot ok"></span><span>Chain: <strong>${chain}</strong> · DEX: <strong>${dex}</strong></span></div>
+              <div class="flag-item"><span class="flag-dot ok"></span><span>FDV: <strong>${fmtUsd(pair.fdv)}</strong> · Market Cap: <strong>${fmtUsd(pair.marketCap)}</strong></span></div>
+              ${pair.txns?.h24 ? `<div class="flag-item"><span class="flag-dot ok"></span><span>24h Txns: <strong>${pair.txns.h24.buys||0}</strong> buys / <strong>${pair.txns.h24.sells||0}</strong> sells</span></div>` : ''}
+            </div>
+          </div>
+          <div class="pitch-section">
+            <div class="pitch-section-label">Manual Diligence Required</div>
+            <div class="checklist">${checklistHtml}</div>
+          </div>
+          <div class="pitch-disclaimer">
+            ⚠ AlphaScout risk scoring uses market data only (liquidity, age, volume, txn skew).
+            It does NOT check contract ownership, holder concentration, or LP lock status.
+            Complete the checklist above before taking any position.
+          </div>
+          <a class="pair-link" href="${url}" target="_blank" rel="noopener">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            VIEW ON DEXSCREENER
+          </a>
+        </div>
+      </div>`;
+  }
+
+  function togglePitch(idx) {
+    const panel = document.getElementById(`pitch-${idx}`);
+    const btn   = document.getElementById(`btn-${idx}`);
+    const card  = document.getElementById(`card-${idx}`);
+    const open  = panel.classList.contains('open');
+    panel.classList.toggle('open', !open);
+    btn.classList.toggle('active', !open);
+    btn.textContent = open ? 'GET PITCH ↓' : 'CLOSE ↑';
+    card.classList.toggle('expanded', !open);
+  }
+
+  // ── SCAN ──
+  async function runScan() {
+    const btn   = document.getElementById('scan-btn');
+    const grid  = document.getElementById('grid');
+    const query = document.getElementById('query-input').value.trim() || 'base';
+
+    btn.disabled = true;
+    btn.innerHTML = `<div class="spinner" style="width:14px;height:14px;border-width:2px;margin:0"></div> SCANNING`;
+    grid.innerHTML = `<div class="state-box"><div class="spinner"></div><p>Scanning Dexscreener for new ${query} pairs…</p></div>`;
+    document.getElementById('stats-bar').style.display = 'none';
+
+    try {
+      // Dexscreener CORS-friendly public endpoint
+      const url = `https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(query)}`;
+      const res  = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const pairs = data.pairs || [];
+
+      currentTokens = processResults(pairs);
+
+      if (!currentTokens.length) {
+        grid.innerHTML = `
+          <div class="state-box">
+            <span class="icon">📡</span>
+            <p>No pairs found younger than ${fmtAge(maxAge)} for "<strong>${query}</strong>".<br><br>
+            Try increasing the age filter or searching a different chain.</p>
+          </div>`;
+      } else {
+        grid.innerHTML = currentTokens.map((p, i) => renderCard(p, i)).join('');
+      }
+
+      updateStats(currentTokens);
+      document.getElementById('last-update').textContent =
+        'Updated ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+
+    } catch (e) {
+      grid.innerHTML = `
+        <div class="state-box">
+          <span class="icon">⚠</span>
+          <p>Scan failed: ${e.message}<br><br>Dexscreener may be rate-limiting. Wait 30 seconds and try again.</p>
+        </div>`;
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> SCAN`;
+    }
+  }
+
+  function setAge(el, val) {
+    maxAge = val;
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  // ── INIT ──
+  document.getElementById('query-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') runScan();
+  });
+
+  // Auto-scan on load
+  runScan();
+
+  // Auto-refresh every 90 seconds
+  setInterval(runScan, 90000);
+</script>
+</body>
+</html>
