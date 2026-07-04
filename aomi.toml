@@ -1,8 +1,6 @@
 [app]
-name = "alphascout"
+name         = "alphascout"
 display_name = "AlphaScout"
-platform = "community"
-git = " https://github.com/Emmascloud/community-apps"
-public = true
-
-server_tags = ["staging"]
+platform     = "community"
+git          = "https://github.com/Emmascloud/alphascout.git"
+public       = true

@@ -13,6 +13,8 @@ pub(crate) fn rt() -> Result<tokio::runtime::Runtime, String> {
 static LAST_CALL: Mutex<Option<Instant>> = Mutex::new(None);
 const MIN_INTERVAL: Duration = Duration::from_millis(300);
 
+/// Enforce a minimum gap between Dexscreener requests.
+/// Called inside every tool's `block_on` block before the HTTP call.
 pub(crate) async fn rate_gate() -> Result<(), String> {
     let sleep_for = {
         let mut guard = LAST_CALL

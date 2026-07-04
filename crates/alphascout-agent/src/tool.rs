@@ -3,7 +3,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use serde_json::{json, Value};
 
-use crate::client::rt;
+use crate::client::{rate_gate, rt};
 use crate::market::analyzer::{summarize_many, token_summary};
 use crate::market::dexscreener::{get_pair, scout_new_pairs};
 use crate::ai::thesis::build_thesis;
@@ -51,6 +51,7 @@ impl DynAomiTool for ScoutNewTokens {
 
         let rt = rt()?;
         rt.block_on(async move {
+            rate_gate().await?;
             let tokens = scout_new_pairs(&query, max_age, limit).await?;
             if tokens.is_empty() {
                 return Ok(json!({
@@ -97,6 +98,7 @@ impl DynAomiTool for AnalyzeToken {
     fn run(_app: &AlphaScoutApp, args: Self::Args, _ctx: DynToolCallCtx) -> Result<Value, String> {
         let rt = rt()?;
         rt.block_on(async move {
+            rate_gate().await?;
             let token = get_pair(&args.chain_id, &args.pair_address).await?;
             Ok(token_summary(&token))
         })
@@ -133,6 +135,7 @@ impl DynAomiTool for PitchToken {
     fn run(_app: &AlphaScoutApp, args: Self::Args, _ctx: DynToolCallCtx) -> Result<Value, String> {
         let rt = rt()?;
         rt.block_on(async move {
+            rate_gate().await?;
             let token = get_pair(&args.chain_id, &args.pair_address).await?;
             Ok(build_thesis(&token))
         })
@@ -173,6 +176,7 @@ impl DynAomiTool for HighConvictionPicks {
 
         let rt = rt()?;
         rt.block_on(async move {
+            rate_gate().await?;
             let tokens = scout_new_pairs(&query, max_age, 25).await?;
 
             let mut scored: Vec<_> = tokens

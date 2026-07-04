@@ -8,7 +8,7 @@
 //! reasoning about a token), route through the Aomi app itself — this path
 //! is the lightweight command fallback.
 
-use crate::market::analyzer::{summarize_many, token_summary};
+use crate::market::analyzer::summarize_many;
 use crate::market::dexscreener::scout_new_pairs;
 
 pub async fn process_message(message: String) -> String {
@@ -88,4 +88,4 @@ pub fn token_report(summary: &serde_json::Value) -> String {
 }
 
 // Re-export for callers that want a single-token summary directly.
-pub use crate::market::analyzer::token_summary as analyze_token_summary;
+

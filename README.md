@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # AlphaScout
 
 AI-powered autonomous market intelligence agent for Base prediction market traders.
@@ -51,6 +50,3 @@ docker run -p 8080:8080 alphascout
 
 AlphaScout turns natural language into actionable crypto market intelligence and autonomous execution on Base using Aomi infrastructure.
 
-=======
-# My-passkey
->>>>>>> ed8e27f85f81688abc69461840bccef7830c7db1
